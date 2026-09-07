@@ -1,0 +1,7 @@
+httpx
+asyncio
+fastapi
+uvicorn
+time
+sqlite3
+pydantic

@@ -18,7 +18,7 @@ def auth_user(username,password):
         return True
     else:
         return False
-    print('User authenticated successfully')
+    # print('User authenticated successfully')
 
 
 # try:
