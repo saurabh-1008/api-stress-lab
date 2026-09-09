@@ -1,2 +1,4 @@
 /auth.db
 /_pycache__/
+db.cpython-311.pyc
+auth_folder/__pycache__/

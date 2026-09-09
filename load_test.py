@@ -6,8 +6,8 @@ URL = "http://127.0.0.1:8000/login"
 USERNAME = "saurabh"
 PASSWORD = "123456"
 
-CONCURRENCY = 5
-TOTAL_REQUESTS = 300
+CONCURRENCY = 10
+TOTAL_REQUESTS = 100
 
 
 async def send_request(client, url, username, password):
@@ -59,6 +59,21 @@ async def run_load_test(total_requests, concurrency):
                 fialed+=1
 
         return results
+    
+
+def calculate_percentiles(results):
+       
+    latencies=[]
+   
+    for lantency,response,status_code in results:
+        latencies.append(lantency)
+    latencies.sort()
+    p95_index = int(len(latencies) * 0.95) - 1
+    p99_index = int(len(latencies) * 0.99) - 1
+
+    p95 = latencies[p95_index]
+    p99 = latencies[p99_index]
+    return p95, p99
 
 
 async def main():
@@ -71,11 +86,21 @@ async def main():
     )
 
     end_time = time.perf_counter()
-
+    print("""
+    
+========================================
+            API STRESS LAB
+========================================
+""")
+    print("Total requests:", TOTAL_REQUESTS)
+    print("Concurrency level:", CONCURRENCY)
     print("Total results:", len(results))
     print("Total test time:", end_time - start_time, "seconds")
     print("Successful requests:", sum(1 for r in results if r[2] == 200))
     print("Failed requests:", sum(1 for r in results if r[2] != 200))
+    p95, p99 = calculate_percentiles(results)
+    print("P95:", p95, "ms")
+    print("P99:", p99, "ms")        
 
     for result in results[:5]:
         print(result)
