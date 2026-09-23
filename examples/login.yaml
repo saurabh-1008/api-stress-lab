@@ -1,0 +1,21 @@
+target:
+  url: "http://127.0.0.1:8000/login"
+  method: "GET"
+  query:
+    username: "saurabh"
+    password: "123456"
+
+load:
+  total_requests: 100
+  concurrency: 20
+  timeout_seconds: 30
+  ramp_up_seconds: 0
+
+assertions:
+  expected_status: [200]
+  max_p95_ms: 500
+  max_error_rate_percent: 1
+
+report:
+  output_dir: "reports"
+  name: "login"

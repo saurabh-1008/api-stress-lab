@@ -6,33 +6,47 @@ URL = "http://127.0.0.1:8000/login"
 USERNAME = "saurabh"
 PASSWORD = "123456"
 
-CONCURRENCY = 10
+CONCURRENCY = 20
 TOTAL_REQUESTS = 100
 
 
 async def send_request(client, url, username, password):
     start_time = time.perf_counter()
 
-    response = await client.get(
-        url,
-        params={
-            "username": username,
-            "password": password
-        }
-    )
+    try:
+        response = await client.get(
+            url,
+            params={
+                "username": username,
+                "password": password
+            }
+        )
 
-    end_time = time.perf_counter()
+        end_time = time.perf_counter()
+        latency = (end_time - start_time) * 1000
 
-    latency = (end_time - start_time) * 1000
+        return latency, response.json(), response.status_code
 
-    return latency, response.json(), response.status_code
+    except httpx.ReadTimeout:
+        end_time = time.perf_counter()
+        latency = (end_time - start_time) * 1000
+
+        return latency, "TIMEOUT", "TIMEOUT"
+
+    
+
+    except httpx.RequestError as e:
+        end_time = time.perf_counter()
+        latency = (end_time - start_time) * 1000
+        print(type(e).__name__, repr(e))
+        return latency, type(e).__name__, "REQUEST_ERROR"
 
 
 async def run_load_test(total_requests, concurrency):
 
     semaphore = asyncio.Semaphore(concurrency)
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
 
         async def worker():
             async with semaphore:
