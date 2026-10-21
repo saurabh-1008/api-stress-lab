@@ -1,0 +1,11 @@
+target:
+  url: "http://127.0.0.1:8000/echo"
+  method: POST
+  body:
+    message: "hello from api-stress-lab"
+load:
+  total_requests: 100
+  concurrency: 10
+assertions:
+  expected_status: [201]
+  max_p95_ms: 500

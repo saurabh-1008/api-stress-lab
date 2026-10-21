@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Literal
+from urllib.parse import urlsplit
 
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -20,8 +21,9 @@ class TargetConfig(BaseModel):
     @field_validator("url")
     @classmethod
     def url_must_not_be_empty(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError("target.url is required")
+        parsed = urlsplit(value)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise ValueError("target.url must be an absolute http:// or https:// URL")
         return value
 
 

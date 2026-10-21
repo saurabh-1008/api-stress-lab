@@ -1,5 +1,0 @@
-api-stress-lab/
-│
-├── main.py
-├── load_test.py
-└── requirements.txt

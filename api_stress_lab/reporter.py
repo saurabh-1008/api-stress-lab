@@ -4,6 +4,7 @@ import json
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 from jinja2 import Template
 from rich.console import Console
@@ -134,16 +135,31 @@ def write_reports(
     json_path = report_dir / "report.json"
     html_path = report_dir / "index.html"
 
+    # Reports are often shared; omit request payloads and authentication data.
+    safe_config = config.model_dump()
+    parsed = urlsplit(config.target.url)
+    host = parsed.hostname or ""
+    if ":" in host:
+        host = f"[{host}]"
+    if parsed.port is not None:
+        host = f"{host}:{parsed.port}"
+    safe_config["target"] = {
+        "method": config.target.method,
+        "url": urlunsplit((parsed.scheme, host, parsed.path, "", "")),
+        "headers": "[REDACTED]",
+        "query": "[REDACTED]",
+        "body": "[REDACTED]",
+    }
     payload = {
-        "config": config.model_dump(),
+        "config": safe_config,
         "metrics": asdict(metrics),
         "assertions": [asdict(assertion) for assertion in assertions],
     }
     json_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     success_rate = 100 - metrics.error_rate_percent
-    html = Template(HTML_TEMPLATE).render(
-        config=config,
+    html = Template(HTML_TEMPLATE, autoescape=True).render(
+        config=safe_config,
         metrics=metrics,
         assertions=assertions,
         success_rate=f"{success_rate:.2f}",
@@ -155,5 +171,5 @@ def write_reports(
 
 def _report_dir(config: LabConfig) -> Path:
     base = Path(config.report.output_dir)
-    name = config.report.name or datetime.now().strftime("%Y%m%d-%H%M%S")
+    name = config.report.name or datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     return base / name

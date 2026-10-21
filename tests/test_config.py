@@ -57,3 +57,9 @@ def test_config_rejects_empty_expected_status() -> None:
                 "assertions": {"expected_status": []},
             }
         )
+
+
+@pytest.mark.parametrize("url", ["/health", "ftp://example.com", "https://", ""])
+def test_config_rejects_non_http_targets(url: str) -> None:
+    with pytest.raises(ValidationError):
+        LabConfig.model_validate({"target": {"url": url}})

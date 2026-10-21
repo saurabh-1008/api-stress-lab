@@ -12,3 +12,19 @@ build/
 dist/
 *.egg-info/
 reports/
+.release-venv/
+.env
+.env.*
+!.env.example
+*.local.yaml
+*.local.yml
+.coverage
+htmlcov/
+
+# Personal launch material and archived experiments (kept locally).
+/docs/LINKEDIN_POST.md
+/docs/PUBLISHING.md
+/legacy/
+
+# Local package-index credentials.
+.pypirc

@@ -34,10 +34,15 @@ async def run_load_test(
     lock = asyncio.Lock()
     results: list[RequestResult] = []
     started_at = time.perf_counter()
+    worker_count = min(config.load.concurrency, config.load.total_requests)
 
     async with httpx.AsyncClient(
         timeout=config.load.timeout_seconds,
         transport=transport,
+        limits=httpx.Limits(
+            max_connections=worker_count,
+            max_keepalive_connections=worker_count,
+        ),
     ) as client:
 
         async def worker(worker_index: int) -> None:
@@ -57,7 +62,7 @@ async def run_load_test(
 
         workers = [
             asyncio.create_task(worker(index))
-            for index in range(config.load.concurrency)
+            for index in range(worker_count)
         ]
         await asyncio.gather(*workers)
 

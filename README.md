@@ -1,112 +1,118 @@
 # API Stress Lab
 
-API Stress Lab is a Python async CLI tool for testing API reliability, scalability, latency, throughput, and failure behavior from a simple YAML config.
+Run configurable HTTP load tests from your terminal and get latency percentiles,
+throughput, failure breakdowns, and shareable JSON/HTML reports.
 
-The MVP is intentionally local-first: define a target, choose request volume and concurrency, run the test, and get terminal, JSON, and HTML reports.
+Python 3.11+ | MIT license | Early-stage, single-machine CLI
 
 ## Install
 
+From a checkout:
+
 ```bash
-pip install -e ".[dev]"
+git clone https://github.com/saurabh-1008/api-stress-lab.git
+cd api-stress-lab
+python -m venv .venv
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+# macOS/Linux: source .venv/bin/activate
+python -m pip install -e .
 ```
 
-## Quick Start
+After the first PyPI release, users can install with `python -m pip install api-stress-lab`.
+
+## Try It Locally
+
+Start the included demo API in one terminal:
+
+```bash
+python examples/demo_api.py
+```
+
+In another terminal with the same virtual environment active:
 
 ```bash
 api-stress-lab run examples/simple-get.yaml
+api-stress-lab run examples/post-json.yaml
 ```
 
-Every run prints a terminal summary and writes:
+You can also use `python -m api_stress_lab run examples/simple-get.yaml`.
+The demo requires only Python's standard library.
 
-```text
-reports/<run-name>/report.json
-reports/<run-name>/index.html
-```
+## Test Your API
 
-## Config Example
+Create `my-api.local.yaml`:
 
 ```yaml
 target:
-  url: "http://127.0.0.1:8000/login"
-  method: "GET"
-  query:
-    username: "saurabh"
-    password: "123456"
-
+  url: "http://127.0.0.1:8000/health"
+  method: GET
 load:
   total_requests: 1000
-  concurrency: 50
-  timeout_seconds: 30
-  ramp_up_seconds: 0
-
+  concurrency: 20
+  timeout_seconds: 10
+  ramp_up_seconds: 2
 assertions:
   expected_status: [200]
   max_p95_ms: 500
-  max_error_rate_percent: 1
-  min_rps: 100
+  max_error_rate_percent: 0
 ```
 
-## Config Fields
-
-`target` describes the HTTP request:
-
-- `url`: full endpoint URL.
-- `method`: one of `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, or `OPTIONS`.
-- `headers`: optional request headers.
-- `query`: optional query parameters.
-- `body`: optional JSON body for non-GET requests.
-
-`load` controls traffic:
-
-- `total_requests`: total requests to send.
-- `concurrency`: number of async workers.
-- `timeout_seconds`: per-request timeout.
-- `ramp_up_seconds`: gradually starts workers across this period.
-
-`assertions` controls pass/fail behavior:
-
-- `expected_status`: status codes treated as successful.
-- `max_p95_ms`: fail when p95 latency is above this value.
-- `max_error_rate_percent`: fail when failed requests exceed this percentage.
-- `min_rps`: fail when throughput is below this value.
-
-`report` controls output:
-
-- `output_dir`: parent folder for generated reports.
-- `name`: optional fixed report folder name.
-
-## Demo API
-
-The existing `auth_folder` FastAPI app can be used as a local target:
+Change the URL to your own endpoint, then run:
 
 ```bash
-cd auth_folder
-uvicorn main:app --reload
+api-stress-lab run my-api.local.yaml
 ```
 
-Then run:
+Run tests only against systems you own or have permission to test.
 
-```bash
-api-stress-lab run examples/login.yaml
-```
+## Configuration
 
-## Development
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `target.url` | Required | Absolute HTTP or HTTPS endpoint |
+| `target.method` | `GET` | GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS |
+| `target.headers` | `{}` | Request headers, including static auth tokens |
+| `target.query` | `{}` | Query parameters |
+| `target.body` | None | Object/list sent as JSON; other values as raw text; disallowed for GET/HEAD |
+| `load.total_requests` | `100` | Positive number of requests across all workers |
+| `load.concurrency` | `10` | Positive maximum worker count |
+| `load.timeout_seconds` | `30` | Positive HTTPX timeout for each network phase, not a whole-test deadline |
+| `load.ramp_up_seconds` | `0` | Nonnegative period over which workers start |
+| `assertions.expected_status` | `[200]` | Nonempty list of successful status codes; every request must match |
+| `assertions.max_p95_ms` | Disabled | Maximum inclusive p95 latency |
+| `assertions.max_error_rate_percent` | Disabled | Maximum inclusive error percentage |
+| `assertions.min_rps` | Disabled | Minimum inclusive observed requests/second |
+| `report.output_dir` | `reports` | Output directory relative to the current working directory |
+| `report.name` | Timestamp | Run subfolder; a fixed name overwrites that run's report files |
 
-```bash
-pip install -e ".[dev]"
-pytest
-```
+Headers and config values are literal; environment-variable expansion is not
+implemented. Keep tokens in ignored `*.local.yaml` files.
 
-Generated reports, local databases, caches, and virtual environments are ignored by git.
+## Reports And Exit Codes
 
-## Roadmap
+Open `reports/<run-name>/index.html` in a browser, or read `report.json` for
+automation. Reports include request totals, status codes, timeout and connection
+error counts, bytes received, observed RPS, min/average/max latency, p50/p90/p95/p99,
+and assertion results. Request headers, query parameters, bodies, URL credentials,
+and URL query strings are omitted from reports. Review endpoint paths before sharing.
 
-- Multi-step API scenarios.
-- Authentication helpers for bearer tokens and login flows.
-- CSV export and richer HTML charts.
-- CI/CD examples for GitHub Actions.
-- Historical report comparison.
+Exit codes: `0` means all assertions passed; `1` means an assertion failed;
+`2` means configuration or execution failed. The expected-status assertion is
+strict: any failed request makes the run fail, even if an error-rate threshold
+would otherwise allow it.
 
-## Contributing
+## Current Limits
 
-Keep changes focused, add or update tests for user-facing behavior, and document new config fields in this README.
+This version tests one endpoint per run using a fixed request count and async
+workers. It does not provide a fixed arrival-rate scheduler, distributed workers,
+duration-based runs, scenario chaining, automatic login, or server-side diagnostics.
+Responses are not retried and redirects are not followed. Results are retained in
+memory for percentile calculation, so memory grows with request count. Throughput
+depends on the generator machine and network as well as the target API.
+
+## Guides
+
+- [User guide: configure and test your application](https://github.com/saurabh-1008/api-stress-lab/blob/main/docs/USER_GUIDE.md)
+- [Contributing](https://github.com/saurabh-1008/api-stress-lab/blob/main/CONTRIBUTING.md)
+
+The maintained CLI lives in `api_stress_lab/`.
