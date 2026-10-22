@@ -2,11 +2,9 @@
 
 ## 1. Install
 
-Use Python 3.11 or newer. Before the first PyPI release, install from the repository:
+Use Python 3.11 or newer. Install the published CLI in a virtual environment:
 
 ```bash
-git clone https://github.com/saurabh-1008/api-stress-lab.git
-cd api-stress-lab
 python -m venv .venv
 ```
 
@@ -23,19 +21,20 @@ source .venv/bin/activate
 ```
 
 ```bash
-python -m pip install -e .
+python -m pip install api-stress-lab
 api-stress-lab --help
 ```
 
-Once a release is published, `python -m pip install api-stress-lab` installs the
-CLI without cloning. Create your own YAML file as below; a wheel installation
+Create your own YAML file as below; a wheel installation
 does not place the repository's examples or docs in your working directory.
 
 ## 2. Verify With The Local Demo
 
-From the repository root, start a local API:
+The demo files live in the source repository. Clone it and start a local API:
 
 ```bash
+git clone https://github.com/saurabh-1008/api-stress-lab.git
+cd api-stress-lab
 python examples/demo_api.py
 ```
 

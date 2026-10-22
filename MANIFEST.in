@@ -1,5 +1,7 @@
 include README.md CHANGELOG.md CONTRIBUTING.md
 include docs/USER_GUIDE.md
+include docs/RELEASING.md
+recursive-include scripts *.py
 exclude AGENTS.md
 exclude docs/LINKEDIN_POST.md docs/PUBLISHING.md
 recursive-include examples *.yaml *.py

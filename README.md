@@ -1,5 +1,9 @@
 # API Stress Lab
 
+[![PyPI](https://img.shields.io/pypi/v/api-stress-lab)](https://pypi.org/project/api-stress-lab/)
+[![CI and Publish](https://github.com/saurabh-1008/api-stress-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/saurabh-1008/api-stress-lab/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/saurabh-1008/api-stress-lab/blob/main/LICENSE)
+
 Run configurable HTTP load tests from your terminal and get latency percentiles,
 throughput, failure breakdowns, and shareable JSON/HTML reports.
 
@@ -7,28 +11,31 @@ Python 3.11+ | MIT license | Early-stage, single-machine CLI
 
 ## Install
 
-From a checkout:
+Install the published package using Python 3.11 or newer:
+
+```bash
+python -m venv .venv
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+# macOS/Linux: source .venv/bin/activate
+python -m pip install api-stress-lab
+api-stress-lab --help
+```
+
+Get later releases with `python -m pip install --upgrade api-stress-lab`.
+
+## Try It Locally
+
+The demo files live in the source repository; installing from PyPI installs the
+CLI, not a copy of the examples in your working directory. Clone the examples
+and start the demo API in one terminal:
 
 ```bash
 git clone https://github.com/saurabh-1008/api-stress-lab.git
 cd api-stress-lab
-python -m venv .venv
-# Windows PowerShell: .venv\Scripts\Activate.ps1
-# macOS/Linux: source .venv/bin/activate
-python -m pip install -e .
-```
-
-After the first PyPI release, users can install with `python -m pip install api-stress-lab`.
-
-## Try It Locally
-
-Start the included demo API in one terminal:
-
-```bash
 python examples/demo_api.py
 ```
 
-In another terminal with the same virtual environment active:
+In another terminal, open the same repository folder and activate your environment:
 
 ```bash
 api-stress-lab run examples/simple-get.yaml
@@ -114,5 +121,34 @@ depends on the generator machine and network as well as the target API.
 
 - [User guide: configure and test your application](https://github.com/saurabh-1008/api-stress-lab/blob/main/docs/USER_GUIDE.md)
 - [Contributing](https://github.com/saurabh-1008/api-stress-lab/blob/main/CONTRIBUTING.md)
+- [Automatic releases and one-time PyPI setup](https://github.com/saurabh-1008/api-stress-lab/blob/main/docs/RELEASING.md)
+
+## Development And Releases
+
+From a source checkout:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest
+```
+
+GitHub Actions tests changes on Windows and Linux with Python 3.11, 3.12, and
+3.13, then builds and validates the package and smoke-tests the installed wheel.
+Pull requests and non-main branches never publish.
+
+After the one-time Trusted Publisher setup, each successful push to `main`
+automatically publishes a new patch release to PyPI, including documentation-only
+changes. For example, if PyPI has `0.1.0`, the next release is `0.1.1`. No manual
+version edits or API token secrets are needed for patch releases. The workflow
+can also be run manually on `main` from the Actions tab.
+
+The source `api_stress_lab/__init__.py` holds the baseline version. CI updates it
+only in its build checkout, and setuptools reads package metadata from that same
+value. The chosen release number is visible in Actions and PyPI; no version-bump
+commit is pushed back to the repository. To begin a new minor/major series, update
+the baseline above the latest published version before merging.
+
+See [release setup](https://github.com/saurabh-1008/api-stress-lab/blob/main/docs/RELEASING.md)
+before enabling automatic publishing.
 
 The maintained CLI lives in `api_stress_lab/`.

@@ -1,23 +1,103 @@
-name: Test and Build
+name: CI and Publish
 
-on: [push, pull_request]
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# Keep version selection and publishing in the same serialized workflow.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   test:
+    name: Test (${{ matrix.os }}, Python ${{ matrix.python }})
+    timeout-minutes: 15
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
         python: ['3.11', '3.12', '3.13']
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
       - run: python -m pip install -e ".[dev]"
       - run: python -m pytest
+
+  build:
+    name: Build and verify distributions
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -e ".[dev]"
+      - name: Choose the next unpublished patch version
+        id: version
+        if: >-
+          github.repository == 'saurabh-1008/api-stress-lab' &&
+          github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        run: python scripts/prepare_release.py
       - run: python -m build
       - run: python -m twine check --strict dist/*
+      - name: Install the wheel in a clean environment
+        run: |
+          python -m venv /tmp/api-stress-lab-wheel
+          /tmp/api-stress-lab-wheel/bin/python -m pip install dist/*.whl
+      - name: Smoke-test the installed package outside the source directory
+        working-directory: /tmp
+        run: |
+          /tmp/api-stress-lab-wheel/bin/python -m api_stress_lab --help
+          /tmp/api-stress-lab-wheel/bin/api-stress-lab --help
+          /tmp/api-stress-lab-wheel/bin/python -c "from importlib.metadata import version; from api_stress_lab import __version__; assert version('api-stress-lab') == __version__"
+      - uses: actions/upload-artifact@v5
+        with:
+          name: python-distributions
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish ${{ needs.build.outputs.version }} to PyPI
+    needs: build
+    if: >-
+      github.repository == 'saurabh-1008/api-stress-lab' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/project/api-stress-lab/${{ needs.build.outputs.version }}/
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: python-distributions
+          path: dist/
+      - name: Publish using PyPI Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
