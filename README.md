@@ -18,7 +18,6 @@ python -m venv .venv
 python -m pip install -e .
 ```
 
-After the first PyPI release, users can install with `python -m pip install api-stress-lab`.
 
 ## Try It Locally
 
